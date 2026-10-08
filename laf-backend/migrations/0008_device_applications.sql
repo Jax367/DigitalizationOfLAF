@@ -23,8 +23,8 @@ INSERT INTO device_applications(device_id,account_id,display_name,status,created
 INSERT INTO device_applications(device_id,account_id,display_name,status,created_at,expires_at,reviewed_at)
  SELECT id,account_id,display_name,CASE WHEN status='revoked' THEN 'superseded' ELSE status END,created_at,datetime(created_at,'+7 days'),reviewed_at FROM reader_devices d WHERE NOT EXISTS(SELECT 1 FROM device_applications WHERE device_id=d.id);
 CREATE TRIGGER application_limits BEFORE INSERT ON device_applications BEGIN
- SELECT CASE WHEN EXISTS(SELECT 1 FROM device_applications WHERE device_id=NEW.device_id AND created_at>datetime('now','-5 minutes')) THEN RAISE(ABORT,'device_apply_cooldown') END;
- SELECT CASE WHEN (SELECT COUNT(*) FROM device_applications WHERE account_id=NEW.account_id AND created_at>datetime('now','-1 hour'))>=20 OR (SELECT COUNT(*) FROM device_applications WHERE account_id=NEW.account_id AND created_at>datetime('now','-1 day'))>=100 THEN RAISE(ABORT,'device_apply_account_limit') END;
+ SELECT RAISE(ABORT,'device_apply_cooldown') WHERE EXISTS(SELECT 1 FROM device_applications WHERE device_id=NEW.device_id AND created_at>datetime('now','-5 minutes'));
+ SELECT RAISE(ABORT,'device_apply_account_limit') WHERE (SELECT COUNT(*) FROM device_applications WHERE account_id=NEW.account_id AND created_at>datetime('now','-1 hour'))>=20 OR (SELECT COUNT(*) FROM device_applications WHERE account_id=NEW.account_id AND created_at>datetime('now','-1 day'))>=100;
 END;
 CREATE TRIGGER application_created AFTER INSERT ON device_applications BEGIN
  UPDATE device_applications SET status='superseded' WHERE device_id=NEW.device_id AND status='pending' AND id<>NEW.id;
