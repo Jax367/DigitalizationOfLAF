@@ -1,0 +1,62 @@
+[
+  {
+    "path": "src\\desktop-layer.cjs",
+    "sha256": "8d7a144b053f09643a59918fcb068c46f604199d7f552126c8d20641ea70f5e4"
+  },
+  {
+    "path": "src\\desktop-layer.ps1",
+    "sha256": "fba8a8956dd10874c775b825b41e91f9571fd06c75bdfaa9da86252f60da09c4"
+  },
+  {
+    "path": "src\\device-client.cjs",
+    "sha256": "93016fa77f284119639c610ee4799957358585e0dcd1b4162ea6e1888f4687bf"
+  },
+  {
+    "path": "src\\editor-handlers.cjs",
+    "sha256": "e29a9288c1d0ffb4268eac3fd2494ca10f0c40761794a1f1e5962a9260a387e1"
+  },
+  {
+    "path": "src\\main.cjs",
+    "sha256": "41f0f306160e84cb94822831834b842d68d09dc5b16466d88c920a865f62037e"
+  },
+  {
+    "path": "src\\preload-viewer.cjs",
+    "sha256": "f7930aca889d4f207cf971c41762ddf87ef4ae68475574c20be58de9382f9859"
+  },
+  {
+    "path": "src\\preload.cjs",
+    "sha256": "061c6bed8e110514042709b5a407e731708c094add43115d782a913dc66211dc"
+  },
+  {
+    "path": "src\\storage.cjs",
+    "sha256": "913e5039b9b2f9bdd331542dc2a3d001d58841c80b9c9abb9c83baa4a90024ab"
+  },
+  {
+    "path": "src\\tray-icon.cjs",
+    "sha256": "73097195cf856869fd3e9b5ea2654c76e5ec550a0198192601a40687bfe7ae3e"
+  },
+  {
+    "path": "src\\ui\\app.js",
+    "sha256": "ea9448e58f616d0a48e5a9e822a5afaeaaee3ad7bb2f97d00829386296a06f75"
+  },
+  {
+    "path": "src\\ui\\editor-theme.css",
+    "sha256": "c47f12030b71b90baf2a209ee9b946e56edd3f14016194c3887d0bdb5865000c"
+  },
+  {
+    "path": "src\\ui\\index.html",
+    "sha256": "e3eb56f7095cdc493f46a83bbe554e97cf77fe33b71a921baf380536c5c31051"
+  },
+  {
+    "path": "src\\ui\\styles.css",
+    "sha256": "8a96ad95b115e5172b05afcd206723243ece2487275633af6c07c34a20ec5455"
+  },
+  {
+    "path": "src\\ui\\viewer.css",
+    "sha256": "12bf68360cd963f652f6d373b37f0ac2da3b81ba7199e1892a8c69e8144a5ee3"
+  },
+  {
+    "path": "src\\ui\\viewer.js",
+    "sha256": "fd7f0a248f26e68866a0ab536c9ba96a710b124ad07e113f975a013df7a5c736"
+  }
+]

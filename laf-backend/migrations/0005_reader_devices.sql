@@ -1,0 +1,5 @@
+CREATE TABLE access_groups (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, enabled INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN(0,1)), created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+INSERT INTO access_groups(name) VALUES ('默认访问组');
+CREATE TABLE reader_accounts (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, group_id INTEGER NOT NULL REFERENCES access_groups(id) ON DELETE RESTRICT, enabled INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN(0,1)), created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE reader_devices (id TEXT PRIMARY KEY, token_hash TEXT NOT NULL UNIQUE, account_id INTEGER NOT NULL REFERENCES reader_accounts(id) ON DELETE RESTRICT, display_name TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN('pending','approved','rejected','revoked')), created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, reviewed_at TEXT);
+CREATE INDEX idx_reader_devices_account ON reader_devices(account_id,status);

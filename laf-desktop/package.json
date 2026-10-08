@@ -1,0 +1,25 @@
+{
+  "name": "laf-desktop",
+  "version": "0.4.0",
+  "description": "只读桌面小窗共享源码、构建工具与网页 GUI 验证",
+  "author": "LAF contributors",
+  "private": true,
+  "scripts": {
+    "start": "node scripts/launch.cjs viewer",
+    "prepare": "node scripts/prepare.cjs",
+    "test": "node --test test/*.test.cjs",
+    "check": "node scripts/check.cjs",
+    "test:desktop": "node node_modules/electron/cli.js scripts/settings-smoke.cjs",
+    "build": "node scripts/build.cjs",
+    "build:viewer": "node scripts/build.cjs viewer"
+  },
+  "overrides": {
+    "app-builder-lib": {
+      "@electron/get": "^5.1.0"
+    }
+  },
+  "devDependencies": {
+    "electron": "^44.5.1",
+    "electron-builder": "26.15.3"
+  }
+}

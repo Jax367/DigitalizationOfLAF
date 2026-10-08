@@ -1,0 +1,40 @@
+{
+  "name": "laf-viewer",
+  "productName": "失物招领只读客户端",
+  "version": "0.8.0",
+  "description": "仅浏览失物记录和图片的桌面 GUI 小窗",
+  "author": "LAF contributors",
+  "private": true,
+  "main": "src/main.cjs",
+  "scripts": {
+    "start": "node ../laf-desktop/scripts/launch.cjs viewer",
+    "build": "node ../laf-desktop/scripts/build.cjs viewer"
+  },
+  "build": {
+    "appId": "school.laf.viewer",
+    "artifactName": "LAF-Viewer-Setup-${version}.${ext}",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "electronVersion": "44.5.1",
+    "win": {
+      "target": "nsis",
+      "executableName": "LAF-Viewer",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "失物招领只读客户端"
+    },
+    "asarUnpack": [
+      "src/desktop-layer.ps1"
+    ]
+  }
+}

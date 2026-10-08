@@ -1,0 +1,9 @@
+{
+  "name": "laf-web-editor",
+  "version": "0.5.0",
+  "private": true,
+  "description": "网页编辑端入口，界面由 laf-backend/public/editor 提供",
+  "scripts": {
+    "start": "node ../laf-backend/scripts/open-editor.mjs"
+  }
+}

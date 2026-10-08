@@ -1,0 +1,98 @@
+{
+  "name": "laf-production",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-01",
+  "account_id": "CHANGE_ME",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [
+    {
+      "pattern": "laf.example.invalid",
+      "custom_domain": true,
+      "previews_enabled": false
+    }
+  ],
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": true,
+    "html_handling": "none"
+  },
+  "vars": {
+    "WORKERS_PLAN": "free",
+    "CLEANUP_IMAGE_BATCH": "2",
+    "CLEANUP_ROW_BATCH": "40",
+    "DEPLOYMENT_MODE": "production",
+    "ALLOWED_HOSTS": "laf.example.invalid",
+    "ALLOWED_SOURCE_IPS": "",
+    "UPLOAD_GLOBAL_MB": "5120",
+    "UPLOAD_USER_MB": "500",
+    "UPLOAD_DAILY_MB": "100",
+    "UPLOAD_GLOBAL_COUNT": "5000",
+    "UPLOAD_USER_COUNT": "500",
+    "UPLOAD_DAILY_COUNT": "100",
+    "MAX_RECORDS": "10000",
+    "LOG_RETENTION_DAYS": "90"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "laf-production",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "IMAGES",
+      "bucket_name": "laf-images-production"
+    }
+  ],
+  "triggers": {
+    "crons": [
+      "0 * * * *"
+    ]
+  },
+  "ratelimits": [
+    {
+      "name": "ENTRY_LIMITER",
+      "namespace_id": "1101",
+      "simple": {
+        "limit": 1200,
+        "period": 60
+      }
+    },
+    {
+      "name": "READ_LIMITER",
+      "namespace_id": "1102",
+      "simple": {
+        "limit": 300,
+        "period": 60
+      }
+    },
+    {
+      "name": "WRITE_LIMITER",
+      "namespace_id": "1103",
+      "simple": {
+        "limit": 60,
+        "period": 60
+      }
+    },
+    {
+      "name": "AUTH_LIMITER",
+      "namespace_id": "1104",
+      "simple": {
+        "limit": 30,
+        "period": 60
+      }
+    },
+    {
+      "name": "UPLOAD_LIMITER",
+      "namespace_id": "1105",
+      "simple": {
+        "limit": 10,
+        "period": 60
+      }
+    }
+  ]
+}
