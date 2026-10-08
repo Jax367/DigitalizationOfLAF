@@ -2,6 +2,7 @@ const {safeStorage}=require('electron');
 const {randomUUID,randomBytes,createHash}=require('node:crypto');
 const path=require('node:path'),os=require('node:os');
 const storage=require('./storage.cjs');
+const network=require('./network.cjs');
 module.exports=({root,origin})=>{
  const file=()=>path.join(root(),'devices',createHash('sha256').update(origin()).digest('hex')+'.json');
  async function load(){return await storage.readJson(file(),null);}
@@ -10,8 +11,7 @@ module.exports=({root,origin})=>{
  const publicInfo=device=>device?{display_name:device.display_name,username:device.username,group_name:device.group_name,status:device.status,account_enabled:device.account_enabled,group_enabled:device.group_enabled}:{display_name:os.hostname(),status:'unregistered'};
  const allowed=device=>device?.status==='approved'&&!!device.account_enabled&&!!device.group_enabled;
  async function call(route,options={}){
-  const response=await fetch(origin()+route,{...options,redirect:'error',signal:AbortSignal.timeout(15000)});const payload=await response.json();
-  if(!response.ok||!payload.success){const error=new Error(payload.error||'设备请求失败');error.status=response.status;throw error;}return payload.data;
+  return (await network.json(origin()+route,options)).data;
  }
  return {
   info:async()=>{const device=await load();if(device){try{token(device);}catch{return {...publicInfo(device),status:'credential_invalid'};}}return publicInfo(device);},

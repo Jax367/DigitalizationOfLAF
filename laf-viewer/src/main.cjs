@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, dialog, screen } =
 const path = require('node:path');
 const fs = require('node:fs/promises');
 const storage = require('./storage.cjs');
+const network = require('./network.cjs');
 const { trayIcon } = require('./tray-icon.cjs');
 const client = require('./client-config.cjs');
 const isEditor = client.role === 'editor';
@@ -76,23 +77,20 @@ async function request(route, options = {}, raw = false) {
       }throw new Error('记录页数超过允许范围');
     }
   }
-  const response = await fetch(`${settings.serverUrl}${route}`, {
-    ...options, redirect: 'error', signal: AbortSignal.timeout(15000),
+  const payload = await network.json(`${settings.serverUrl}${route}`, {
+    ...options,
     headers: { ...(options.body && !(options.body instanceof Uint8Array) ? { 'Content-Type': 'application/json' } : {}), ...(isEditor ? session ? {Authorization: 'Bearer '+session.token} : {} : await deviceClient.headers()), ...options.headers },
   });
-  const reader=response.body.getReader(),chunks=[];let length=0;
-  while(true){const {done,value}=await reader.read();if(done)break;length+=value.byteLength;if(length>2*1024*1024){await reader.cancel();throw new Error('服务器响应过大');}chunks.push(value);}
-  const payload=JSON.parse(Buffer.concat(chunks).toString('utf8'));
-  if (!response.ok || !payload.success) { if (response.status === 401) session = null; const error=new Error(payload.error ?? `服务器返回 ${response.status}`);error.status=response.status;throw error; }
   return raw?payload:payload.data;
 }
 async function fetchImage(route) {
-  const response = await fetch(`${settings.serverUrl}${route}`, { redirect: 'error', signal: AbortSignal.timeout(15000),headers:isEditor?session?{Authorization:'Bearer '+session.token}:{}:await deviceClient.headers() });
+  return network.withResponse(`${settings.serverUrl}${route}`, { headers:isEditor?session?{Authorization:'Bearer '+session.token}:{}:await deviceClient.headers() }, async response => {
   const type = response.headers.get('content-type')?.split(';')[0];
   if (!response.ok || !['image/png', 'image/jpeg', 'image/webp'].includes(type)) throw new Error('图片下载失败');
   let size = 0; const chunks = [];
   for await (const chunk of response.body) { size += chunk.length; if (size > 5 * 1024 * 1024) throw new Error('图片过大'); chunks.push(chunk); }
   return { size, dataUrl: `data:${type};base64,${Buffer.concat(chunks).toString('base64')}` };
+  });
 }
 async function records(refresh) {
   if(!isEditor){

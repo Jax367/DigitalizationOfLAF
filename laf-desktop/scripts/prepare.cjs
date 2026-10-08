@@ -11,7 +11,7 @@ async function prepare(role) {
   const config = definitions[role]; if (!config) throw new Error('客户端类型必须为 viewer 或 editor');
   const target = path.join(root, `laf-${role}`, 'src');
   await fs.mkdir(path.join(target, 'ui'), { recursive: true });
-  for (const file of ['main.cjs', 'storage.cjs', 'tray-icon.cjs', 'device-client.cjs', 'desktop-layer.cjs', 'desktop-layer.ps1','preload-reader.cjs','side-detail.cjs','preload-detail.cjs']) await fs.copyFile(path.join(source, file), path.join(target, file));
+  for (const file of ['main.cjs', 'storage.cjs', 'network.cjs', 'tray-icon.cjs', 'device-client.cjs', 'desktop-layer.cjs', 'desktop-layer.ps1','preload-reader.cjs','side-detail.cjs','preload-detail.cjs']) await fs.copyFile(path.join(source, file), path.join(target, file));
   await fs.writeFile(path.join(target, 'client-config.cjs'), `module.exports = ${JSON.stringify(config, null, 2)};\n`);
   await fs.copyFile(path.join(source, role === 'viewer' ? 'preload-viewer.cjs' : 'preload.cjs'), path.join(target, 'preload.cjs'));
   await fs.copyFile(path.join(source, 'ui', role === 'viewer' ? 'viewer.js' : 'app.js'), path.join(target, 'ui/app.js'));
