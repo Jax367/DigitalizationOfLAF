@@ -153,6 +153,7 @@ else {
       handle('device:info',()=>deviceClient.info());
       handle('device:refresh',()=>deviceClient.refresh());
       handle('device:apply',input=>deviceClient.apply(input));
+      handle('device:applications',page=>deviceClient.applications(page));
       handle('cache:location', () => ({ directory: directory(), recordsFile: path.join(directory(), 'records.json') }));
       handle('cache:choose-directory', async () => {
         const result = await dialog.showOpenDialog(mainWindow, { title: '选择本地记录保存目录', properties: ['openDirectory', 'createDirectory'] });

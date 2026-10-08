@@ -1,0 +1,64 @@
+import assert from 'node:assert/strict';
+import {Miniflare,convertV4MiniflareOptions} from 'miniflare';
+import {DatabaseSync} from 'node:sqlite';
+import {readFile,readdir} from 'node:fs/promises';
+import {fileURLToPath} from 'node:url';
+import {randomUUID,randomBytes} from 'node:crypto';
+const schema=new DatabaseSync(':memory:');schema.exec('PRAGMA foreign_keys=ON');
+const files=(await readdir(new URL('../migrations/',import.meta.url))).filter(f=>f.endsWith('.sql')).sort();
+for(const file of files.filter(f=>!f.startsWith('0008')))schema.exec(await readFile(new URL('../migrations/'+file,import.meta.url),'utf8'));
+schema.exec("INSERT INTO reader_accounts(id,username,password_hash,group_id) VALUES(1,'legacy','fixture',1); INSERT INTO reader_devices(id,token_hash,account_id,display_name,status,created_at) VALUES('legacy-approved','fixture',1,'已批准旧设备','approved','2000-01-01')");
+schema.exec("INSERT INTO reader_devices(id,token_hash,account_id,display_name,status) VALUES('legacy-pending','fixture-pending',1,'旧待审批设备','pending'); INSERT INTO logs(action,target,details,created_at) VALUES('device.apply','devices/legacy-pending','{\"account_id\":1,\"display_name\":\"旧名称\"}','2026-10-01 10:00:00'),('device.apply','devices/legacy-pending','{\"account_id\":1,\"display_name\":\"新名称\"}','2026-10-02 11:00:00')");
+schema.exec(await readFile(new URL('../migrations/0008_device_applications.sql',import.meta.url),'utf8'));
+assert.equal(schema.prepare("SELECT status FROM reader_devices WHERE id='legacy-approved'").get().status,'approved');
+assert.equal(schema.prepare("SELECT created_at FROM device_applications WHERE device_id='legacy-approved'").get().created_at,'2000-01-01');
+assert.deepEqual(schema.prepare("SELECT status,created_at FROM device_applications WHERE device_id='legacy-pending' ORDER BY id").all().map(r=>({...r})),[{status:'superseded',created_at:'2026-10-01 10:00:00'},{status:'pending',created_at:'2026-10-02 11:00:00'}]);
+const statements=schema.prepare("SELECT sql FROM sqlite_master WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%' ORDER BY CASE type WHEN 'table' THEN 0 WHEN 'index' THEN 1 ELSE 2 END").all().map(row=>row.sql);schema.close();
+const rates=Object.fromEntries(['ENTRY_LIMITER','READ_LIMITER','WRITE_LIMITER','AUTH_LIMITER','UPLOAD_LIMITER'].map((name,i)=>[name,{namespace_id:String(3000+i),simple:{limit:10000,period:60}}]));
+const mf=new Miniflare(convertV4MiniflareOptions({workers:[{name:'applications',modules:true,scriptPath:fileURLToPath(new URL('../.test-build/index.js',import.meta.url)),compatibilityDate:'2026-09-01',d1Databases:['DB'],r2Buckets:['IMAGES'],ratelimits:rates,bindings:{ADMIN_BOOTSTRAP_KEY:'fixture-applications',CLEANUP_IMAGE_BATCH:'2',CLEANUP_ROW_BATCH:'40'}}]}));
+let checks=2,admin;const db=await mf.getD1Database('DB','applications');for(const sql of statements)await db.prepare(sql).run();await db.prepare("INSERT INTO access_groups(id,name) VALUES(1,'申请组')").run();
+async function call(route,method='GET',body,token=admin,expected=200,extra={}){
+ const response=await mf.dispatchFetch('http://localhost'+route,{method,headers:{...(token?{Authorization:'Bearer '+token}:{}),...extra,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});const payload=await response.json();assert.equal(response.status,expected,route+': '+JSON.stringify(payload));checks++;return payload;
+}
+const credentials=()=>({username:'request-reader',password:'Request-password-2026',display_name:'测试设备',device_id:randomUUID(),device_token:randomBytes(32).toString('hex')});
+const history=c=>call('/api/device/applications','GET',undefined,null,200,{'X-Device-Token':c.device_token});
+const resetAttempts=()=>db.prepare('DELETE FROM auth_throttle').run();
+try{
+ await call('/api/auth/bootstrap','POST',{username:'application-admin',password:'Application-password-2026'},null,201,{'X-Bootstrap-Key':'fixture-applications'});
+ admin=(await call('/api/auth/login','POST',{username:'application-admin',password:'Application-password-2026'},null)).data.token;
+ const account=(await call('/api/reader-accounts','POST',{username:'request-reader',password:'Request-password-2026',group_id:1},admin,201)).data;
+ const c=credentials();await call('/api/device/apply','POST',c,null,201);let first=(await history(c)).data[0];
+ await call('/api/device/apply','POST',c,null,429);assert.equal((await history(c)).data.length,1);checks++;
+ await db.prepare("UPDATE device_applications SET created_at=datetime('now','-6 minutes') WHERE id=?").bind(first.id).run();
+ await call('/api/device/apply','POST',{...c,display_name:'第二次名称'},null,201);const rows=(await history(c)).data;
+ assert.equal(rows.length,2);assert.notEqual(rows[0].id,rows[1].id);assert.notEqual(rows[0].created_at,rows[1].created_at);assert.equal(rows[1].status,'superseded');assert.equal(rows[1].display_name,'测试设备');checks++;
+ await call('/api/device-applications/'+first.id,'PATCH',{status:'approved'},admin,409);
+ await call('/api/device-applications/'+rows[0].id,'PATCH',{status:'approved'});
+ await call('/api/device/apply','POST',c,null,409);assert.equal((await history(c)).data[0].status,'approved');checks++;
+ await call('/api/device-applications','GET',undefined,null,401);await call('/api/device/applications','GET',undefined,null,401);
+ const other=credentials();await call('/api/device/apply','POST',other,null,201);assert.equal((await history(other)).data.length,1);checks++;
+ const ownPage=await call('/api/device/applications?limit=1','GET',undefined,null,200,{'X-Device-Token':c.device_token});assert.ok(ownPage.pagination.nextCursor);checks++;
+ await db.prepare("UPDATE device_applications SET expires_at=datetime('now','-1 day') WHERE device_id=?").bind(other.device_id).run();
+ assert.equal((await history(other)).data.length,0);checks++;
+ await call('/api/devices/'+other.device_id,'PATCH',{status:'approved'},admin,409);
+ const status=await call('/api/device/status','GET',undefined,null,200,{'X-Device-Token':other.device_token});assert.equal(status.data.status,'expired');checks++;
+ await resetAttempts();const race=credentials();
+ const concurrent=await Promise.all([1,2].map(()=>mf.dispatchFetch('http://localhost/api/device/apply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(race)})));
+ assert.deepEqual(concurrent.map(r=>r.status).sort(),[201,429]);
+ // Request order is arbitrary: assert the actual stored state, not which promise wins.
+ assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM device_applications WHERE device_id=?').bind(race.device_id).first()).n,1);checks++;
+ await resetAttempts();
+ await db.prepare("INSERT INTO reader_accounts(id,username,password_hash,group_id) SELECT 99,'daily',password_hash,1 FROM reader_accounts WHERE id=?").bind(account.id).run();
+ await db.prepare("INSERT INTO reader_devices(id,token_hash,account_id,display_name,status) VALUES('quota-seed','quota-seed',99,'限频数据','pending')").run();
+ for(let i=0;i<100;i++)await db.prepare("INSERT INTO device_applications(device_id,account_id,display_name,created_at) VALUES('quota-seed',99,'限频数据',datetime('now','-2 hours'))").run();
+ await call('/api/device/apply','POST',{...credentials(),username:'daily'},null,429);
+ assert.equal((await db.prepare("SELECT COUNT(*) AS n FROM reader_devices WHERE account_id=99").first()).n,1);checks++;
+ await db.prepare("DELETE FROM device_applications WHERE account_id=99").run();
+ for(let i=0;i<20;i++)await db.prepare("INSERT INTO device_applications(device_id,account_id,display_name,created_at) VALUES('quota-seed',99,'限频数据',datetime('now','-20 minutes'))").run();
+ await call('/api/device/apply','POST',{...credentials(),username:'daily'},null,429);
+ await resetAttempts();const attempt=credentials();for(let i=0;i<10;i++)await call('/api/device/apply','POST',{...attempt,password:'Wrong-password-2026'},null,401);await call('/api/device/apply','POST',attempt,null,429);
+ const scheduled=await (await mf.getWorker('applications')).scheduled({cron:'0 * * * *'});assert.equal(scheduled.outcome,'ok');
+ assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM device_applications WHERE device_id=?').bind(other.device_id).first()).n,0);
+ assert.equal((await db.prepare('SELECT status FROM reader_devices WHERE id=?').bind(c.device_id).first()).status,'approved');checks++;
+ console.log(checks+' 项申请历史、迁移、分页隔离、审批有效期、并发冷却、账号配额、错误密码限频和清理检查通过');
+}finally{await mf.dispose();}

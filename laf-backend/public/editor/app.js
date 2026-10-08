@@ -16,7 +16,7 @@ const api = {
   register:body=>api.request('/api/auth/register','POST',body),
   logout:()=>api.request('/api/auth/logout','POST'),
   api:async(route,method='GET',body)=>{
-    if(method==='GET'&&['/api/users','/api/access-groups','/api/reader-accounts','/api/devices'].includes(route)){
+    if(method==='GET'&&['/api/users','/api/access-groups','/api/reader-accounts','/api/devices','/api/device-applications'].includes(route)){
       const query=new URLSearchParams({limit:'100'});let rows=[],last=Infinity;
       for(let page=0;page<100;page++){const result=await api.request(route+'?'+query.toString(),'GET',undefined,true);rows.push(...result.data);const next=result.pagination?.nextCursor;if(next==null)return rows;if(!Number.isSafeInteger(next)||next>=last)throw new Error('分页响应异常');last=next;query.set('before',String(next));query.set('snapshot',String(result.pagination.snapshot));}throw new Error('管理列表超过加载范围');
     }return api.request(route,method,body);

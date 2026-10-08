@@ -26,7 +26,7 @@ async function dispatch(request: Request, env: Env): Promise<Response> {
         headers.set('X-Content-Type-Options','nosniff');headers.set('Referrer-Policy','same-origin');
         return new Response(response.body,{status:response.status,headers});
       }
-      if(/^\/api\/(?:device(?:\/|$)|devices(?:\/|$)|reader-accounts(?:\/|$)|access-groups(?:\/|$))/.test(path))return await devicesRoute(request,env,path);
+      if(/^\/api\/(?:device(?:\/|$)|devices(?:\/|$)|device-applications(?:\/|$)|reader-accounts(?:\/|$)|access-groups(?:\/|$))/.test(path))return await devicesRoute(request,env,path);
       if (path === '/api/items/cache-status') return await cacheStatusRoute(request, env);
       const itemMatch = /^\/api\/items(?:\/([^/]+))?$/.exec(path);
       if (itemMatch) return await itemsRoute(request, env, itemMatch[1]);

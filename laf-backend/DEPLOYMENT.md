@@ -121,3 +121,15 @@ Start-Server.ps1 默认只监听 127.0.0.1；-Lan 自动选择一个私网接口
 使用独立 .test-state 和 8790 测试服务运行 integration.mjs、devices-smoke.mjs、web-smoke.mjs。先 wrangler deploy --dry-run --outdir .test-build，再 node scripts/security-smoke.mjs：独立内存数据库验证 HTTPS、来源限制、请求流大小、分页、并发配额、日预算、删除队列和限流。桌面设备 GUI 测试验证两页 125 条完整缓存，pagination-gui-smoke.cjs 验证网页 50→100→125 条加载、搜索与筛选。
 
 参考：[Cloudflare 自定义域名](https://developers.cloudflare.com/workers/configuration/routing/custom-domains/) · [关闭默认入口](https://developers.cloudflare.com/workers/configuration/routing/workers-dev/) · [RateLimit 的地域与精度限制](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/)
+
+## 设备申请历史（客户端 0.8.3）
+
+新增迁移 0008_device_applications.sql，设备身份与申请分表。每次成功提交产生独立递增申请编号和服务器 UTC 时间；重试被限流时不产生新记录。同设备新申请将旧待处理记录标为 superseded（被替代），只审批当前有效申请，已批准设备不能反复申请改变授权。
+
+默认规则：同设备至少间隔 5 分钟；账号成功申请最多 20 次/小时、100 次/天，通过数据库触发器原子检查，换设备编号或换来源 IP 不能绕过账号配额。原账号 10 次尝试/15 分钟、来源 20 次尝试/15 分钟及边缘认证限流继续生效。后台每小时按 CLEANUP_ROW_BATCH 分批删除过期申请：pending 和 superseded 在 7 天后清理，已处理申请在 90 天后清理；没有剩余申请的未批准设备身份也分批移除。已批准设备身份与授权不受申请历史清理影响。到期申请在物理清理前也不能批准。
+
+升级尽量从原 device.apply 审计日志恢复旧申请与时间，没有日志的设备保留一条首次登记记录；已经删除的日志无法恢复。审计日志留存仍由 LOG_RETENTION_DAYS 控制，清理申请不删除对应审计日志。
+
+GET /api/device-applications 及 PATCH /api/device-applications/:id 仅管理员可用；GET /api/device/applications 使用设备令牌，仅返回本机历史。管理网页每页 50 条，客户端每页 20 条，支持继续加载。旧 /api/devices 审批 API 对待处理设备仍兼容，但同样校验有效申请与到期时间。
+
+更新时运行 npm run deploy，由部署脚本自动应用新迁移，然后刷新网页并安装 0.8.3 客户端。不需要重新创建数据库、管理员或已批准设备。新增测试 npm run test:applications；客户端历史分页及网页按申请审批均有 GUI 检查。

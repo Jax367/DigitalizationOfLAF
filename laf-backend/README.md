@@ -65,3 +65,5 @@ reader_accounts 与 users 分表；设备请求用 X-Device-Token，不赋予编
 正式 HTTPS、依赖版本、上传配额、分层限流、请求大小、分页协议及日志留存配置详见 [DEPLOYMENT.md](DEPLOYMENT.md)。域名未确定时部署检查会拒绝上线。本地运行始终使用开发配置，实际数据库升级由根目录启动脚本执行，本次测试未修改实际记录或账号。
 
 无需购买域名时使用 `wrangler.workers-dev.example.json` 模板，正式入口为 `https://laf-production.账号子域名.workers.dev`。部署检查已支持此模式，仍只允许一个指定 HTTPS 主机名，保留设备审批和认证，关闭预览地址；填写真实账号及资源后使用同一 deploy 脚本。步骤见 DEPLOYMENT.md 的「不购买域名」章节。
+
+设备加入申请已独立保存并记录各次时间，账号限频及过期清理默认规则见 DEPLOYMENT.md。迁移 0008 会恢复现存审计日志中的历史申请，保留已批准设备授权。

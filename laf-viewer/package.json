@@ -1,7 +1,7 @@
 {
   "name": "laf-viewer",
   "productName": "失物招领只读客户端",
-  "version": "0.8.2",
+  "version": "0.8.3",
   "description": "仅浏览失物记录和图片的桌面 GUI 小窗",
   "author": "LAF contributors",
   "private": true,

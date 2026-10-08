@@ -7,6 +7,7 @@ const invoke = async (channel, ...args) => {
 contextBridge.exposeInMainWorld('laf', {
   openReaderWindow:()=>invoke('reader:open'),
   deviceInfo:()=>invoke('device:info'),refreshDevice:()=>invoke('device:refresh'),applyDevice:input=>invoke('device:apply',input),
+  deviceApplications:page=>invoke('device:applications',page),
   settings: () => invoke('settings:get'), saveSettings: input => invoke('settings:save', input),
   records: refresh => invoke('records:list', refresh), image: id => invoke('records:image', id),
   clearCache: () => invoke('cache:clear'),

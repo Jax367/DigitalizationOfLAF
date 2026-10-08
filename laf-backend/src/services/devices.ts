@@ -5,7 +5,9 @@ export interface ReaderDevice {id:string;display_name:string;status:string;accou
 export async function deviceIdentity(request:Request,env:Env):Promise<ReaderDevice>{
  const token=request.headers.get('X-Device-Token');if(!token||!/^[a-f0-9]{64}$/.test(token))throw new HttpError(401,'请申请设备授权');
  const device=await env.DB.prepare('SELECT d.id,d.display_name,d.status,d.account_id,a.username,a.enabled AS account_enabled,a.group_id,g.name AS group_name,g.enabled AS group_enabled FROM reader_devices d JOIN reader_accounts a ON a.id=d.account_id JOIN access_groups g ON g.id=a.group_id WHERE d.token_hash=?').bind(await digest(token)).first<ReaderDevice>();
- if(!device)throw new HttpError(401,'设备授权无效，请重新申请');return device;
+ if(!device)throw new HttpError(401,'设备授权无效，请重新申请');
+ if(device.status==='pending'&&!await env.DB.prepare("SELECT id FROM device_applications WHERE device_id=? AND status='pending' AND expires_at>CURRENT_TIMESTAMP LIMIT 1").bind(device.id).first())device.status='expired';
+ return device;
 }
 export async function requireReadAccess(request:Request,env:Env):Promise<{user?:PublicUser;device?:ReaderDevice}>{
  if(sessionToken(request))return {user:await requireUser(request,env)};

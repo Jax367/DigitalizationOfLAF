@@ -6,7 +6,7 @@ admin=(await call('/api/auth/login','POST',{username:'integration-admin',passwor
 const suffix=Date.now(),password='Reader-password-2026';
 const group=await call('/api/access-groups','POST',{name:'设备测试组-'+suffix},null,201,true);
 const account=await call('/api/reader-accounts','POST',{username:'reader-'+suffix,password,group_id:group.id},null,201,true);
-const token=randomBytes(32).toString('hex'),id=randomUUID(),credentials={username:account.username,password,display_name:'三楼走廊显示屏',device_id:id,device_token:token};
+let token=randomBytes(32).toString('hex'),id=randomUUID();const credentials={username:account.username,password,display_name:'三楼走廊显示屏',device_id:id,device_token:token};
 await call('/api/reader-accounts','POST',{username:'bypass',password,group_id:group.id},null,401);
 await call('/api/items', 'GET',undefined,null,401);await call('/api/items/cache-status?ids=1','GET',undefined,null,401);
 await call('/api/device/apply','POST',{...credentials,password:'Wrong-password-2026'},null,401);
@@ -33,8 +33,9 @@ await call('/api/reader-accounts/'+account.id,'PATCH',{enabled:true},null,200,tr
 await call('/api/access-groups/'+group.id,'PATCH',{enabled:false},null,200,true);await call('/api/items','GET',undefined,token,403);
 await call('/api/access-groups/'+group.id,'PATCH',{enabled:true},null,200,true);
 await call('/api/devices/'+id,'PATCH',{status:'revoked'},null,200,true);await call('/api/items','GET',undefined,token,403);
-await call('/api/device/apply','POST',credentials,null,201);await call('/api/devices/'+id,'PATCH',{status:'rejected'},null,200,true);await call('/api/items','GET',undefined,token,403);
+await call('/api/device/apply','POST',credentials,null,429);await call('/api/devices/'+id,'PATCH',{status:'rejected'},null,200,true);await call('/api/items','GET',undefined,token,403);
 await call('/api/reader-accounts/'+account.id,'PATCH',{password:'New-reader-password-2026'},null,200,true);await call('/api/device/apply','POST',credentials,null,401);
+id=randomUUID();token=randomBytes(32).toString('hex');credentials.device_id=id;credentials.device_token=token;
 await call('/api/device/apply','POST',{...credentials,password:'New-reader-password-2026'},null,201);await call('/api/devices/'+id,'PATCH',{status:'approved'},null,200,true);
 const devices=await call('/api/devices','GET',undefined,null,200,true);assert.ok(!JSON.stringify(devices).includes(token));assert.ok(!JSON.stringify(devices).includes('token_hash'));checks++;
 const logs=await call('/api/logs?action=device.review','GET',undefined,null,200,true);assert.ok(logs.some(log=>log.target==='devices/'+id));assert.ok(!JSON.stringify(logs).includes(password));checks++;

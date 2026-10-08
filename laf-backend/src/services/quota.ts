@@ -25,6 +25,8 @@ export async function cleanupResources(env:Env){
  const pending=(await env.DB.prepare('SELECT id,object_key FROM image_deletions ORDER BY created_at LIMIT ?').bind(imageBatch).all<{id:string;object_key:string}>()).results;
  for(const row of pending){await env.IMAGES.delete(row.object_key);await env.DB.prepare('DELETE FROM image_deletions WHERE id=?').bind(row.id).run();}
  await env.DB.batch([env.DB.prepare('DELETE FROM auth_throttle WHERE key IN(SELECT key FROM auth_throttle WHERE reset_at<=? LIMIT ?)').bind(now(),rowBatch),env.DB.prepare("DELETE FROM upload_daily WHERE rowid IN(SELECT rowid FROM upload_daily WHERE day<date('now','-7 days') LIMIT ?)").bind(rowBatch)]);
+ await env.DB.prepare("DELETE FROM device_applications WHERE id IN(SELECT id FROM device_applications WHERE (status IN('pending','superseded') AND expires_at<=CURRENT_TIMESTAMP) OR created_at<datetime('now','-90 days') ORDER BY id LIMIT ?)").bind(rowBatch).run();
+ await env.DB.prepare("DELETE FROM reader_devices WHERE id IN(SELECT d.id FROM reader_devices d WHERE d.status IN('pending','rejected') AND NOT EXISTS(SELECT 1 FROM device_applications WHERE device_id=d.id) LIMIT ?)").bind(rowBatch).run();
  if(env.LOG_RETENTION_DAYS && env.LOG_RETENTION_DAYS!=='0'){
   const days=positiveSetting(env.LOG_RETENTION_DAYS,90,3650);
   await env.DB.prepare("DELETE FROM logs WHERE id IN(SELECT id FROM logs WHERE created_at<datetime('now',?) ORDER BY id LIMIT ?)").bind('-'+days+' days',rowBatch*5).run();

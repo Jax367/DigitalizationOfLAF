@@ -17,6 +17,11 @@ module.exports=({root,origin})=>{
   info:async()=>{const device=await load();if(device){try{token(device);}catch{return {...publicInfo(device),status:'credential_invalid'};}}return publicInfo(device);},
   authorized:async()=>{const device=await load();if(!allowed(device))return false;try{token(device);return true;}catch{return false;}},
   headers:async()=>{const device=await load();return device?{'X-Device-Token':token(device)}:{};},
+  async applications(page={}){
+   const device=await load();if(!device)return {data:[],pagination:{nextCursor:null}};
+   const query=new URLSearchParams({limit:'20'});for(const key of ['before','snapshot'])if(page[key]!==undefined){if(!Number.isSafeInteger(page[key])||page[key]<0)throw new Error('无效申请分页');query.set(key,String(page[key]));}
+   return network.json(origin()+'/api/device/applications?'+query,{headers:{'X-Device-Token':token(device)}});
+  },
   async apply(input){
    if(!safeStorage.isEncryptionAvailable())throw new Error('系统凭据加密不可用，无法保存设备授权');
    if(!input||typeof input.display_name!=='string'||!input.display_name.trim())throw new Error('请输入设备显示名称');

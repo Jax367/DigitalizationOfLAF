@@ -40,6 +40,18 @@ async function waitFor(fn){for(let i=0;i<150;i++){if(await fn())return;await del
  assert.equal(await js('document.querySelector(".device-settings").open'),false);
  assert.equal(await js('Boolean(document.querySelector("#settings-form").compareDocumentPosition(document.querySelector(".device-settings")) & Node.DOCUMENT_POSITION_FOLLOWING)'),true);
  assert.equal(await js('document.querySelector("#windowPlacement").value'),'desktop');
+ const testNetwork=require('../../laf-viewer/src/network.cjs'),originalJson=testNetwork.json;
+ testNetwork.json=async(url,options)=>{
+  if(url.includes('/api/device/applications')){assert.equal(options.headers['X-Device-Token'],'a'.repeat(64));const older=url.includes('before=800');return {success:true,data:older?[{id:799,display_name:'更早申请',status:'rejected',created_at:'2026-10-01 09:00:00'}]:[{id:801,display_name:'最新申请',status:'pending',created_at:'2026-10-03 11:00:00'},{id:800,display_name:'前一次申请',status:'superseded',created_at:'2026-10-02 10:00:00'}],pagination:{snapshot:801,nextCursor:older?null:800}};}
+  return originalJson(url,options);
+ };
+ await js('document.querySelector("#device-apply-form").closest("details").open=true');
+ await waitFor(()=>js('document.querySelectorAll("#application-history .hint").length===2'));
+ assert.ok(await js('document.querySelector("#application-history").textContent.includes("#801") && document.querySelector("#application-history").textContent.includes("#800")'));
+ await js('document.querySelector("#applications-more").click()');
+ await waitFor(()=>js('document.querySelectorAll("#application-history .hint").length===3'));
+ assert.equal(await js('document.querySelector("#applications-more").hidden'),true);
+ testNetwork.json=originalJson;await js('document.querySelector("#device-apply-form").closest("details").open=false');
  assert.ok(await js('document.querySelector(".current-directory").textContent.includes("records.json")'));
  const chosen=path.join(output,'chosen-records');await fs.mkdir(chosen,{recursive:true});
  dialog.showOpenDialog=async()=>({canceled:false,filePaths:[chosen]});
