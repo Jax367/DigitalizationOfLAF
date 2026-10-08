@@ -11,6 +11,8 @@ public static class LafDesktopLayer {
  [DllImport("user32.dll")] public static extern bool UnhookWinEvent(IntPtr hook);
  [DllImport("user32.dll")] public static extern bool IsWindow(IntPtr h);
  [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr h);
+ [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
+ [DllImport("user32.dll")] public static extern int GetWindowLong(IntPtr h,int index);
  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
  [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern int GetClassName(IntPtr h, StringBuilder b, int n);
  [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int command);
@@ -40,20 +42,28 @@ public static class LafDesktopLayer {
  public static void Pump() { System.Windows.Forms.Application.DoEvents(); Maintain(); }
  public static void Stop() { if(hook!=IntPtr.Zero)UnhookWinEvent(hook); }
  private static void Maintain() {
-  if(!enabled || !IsWindow(widget)){positioned=false;return;}
+  if(!enabled || !IsWindow(widget) || !IsWindowVisible(widget)){positioned=false;return;}
   var foreground=GetForegroundWindow();
   if(foreground==IntPtr.Zero)return;
   // Show Desktop raises the shell above normal windows, even without minimizing them.
   // Use the foreground event to stay above the shell only while the desktop is shown.
-  if(foreground!=widget && foreground!=new IntPtr(System.Threading.Interlocked.Read(ref peerHandle)))desktopShown=DesktopForeground();
+  var peer=new IntPtr(System.Threading.Interlocked.Read(ref peerHandle));
+  if(foreground!=widget && foreground!=peer)desktopShown=DesktopForeground();
   bool restored=false;
   if(desktopShown && IsIconic(widget)){ShowWindow(widget,4);restored=true;}
-  if(positioned && !restored && lastForeground==foreground && previousDesktop==desktopShown)return;
+  bool peerVisible=IsWindow(peer) && IsWindowVisible(peer);
+  if(desktopShown && peerVisible && IsIconic(peer)){ShowWindow(peer,4);restored=true;}
+  bool topmost=(GetWindowLong(widget,-20)&8)!=0;
+  bool peerMatches=!peerVisible || ((GetWindowLong(peer,-20)&8)!=0)==desktopShown;
+  // Chromium's show/restore can reset z-order without changing the foreground.
+  if(positioned && !restored && lastForeground==foreground && previousDesktop==desktopShown && topmost==desktopShown && peerMatches)return;
   lastForeground=foreground;previousDesktop=desktopShown;positioned=true;
   if(desktopShown) {
    SetWindowPos(widget,new IntPtr(-1),0,0,0,0,0x13);
+   if(peerVisible)SetWindowPos(peer,new IntPtr(-1),0,0,0,0,0x13);
   } else if(foreground!=widget) {
    SetWindowPos(widget,new IntPtr(1),0,0,0,0,0x13);
+   if(peerVisible)SetWindowPos(peer,new IntPtr(1),0,0,0,0,0x13);
   }
  }
  public static bool DesktopForeground() {

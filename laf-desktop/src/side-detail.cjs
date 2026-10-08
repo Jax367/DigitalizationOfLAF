@@ -1,7 +1,7 @@
 const {BrowserWindow,screen}=require('electron');
 const path=require('node:path');
 module.exports=({main,settings,read,layer,onClose,saveWidth})=>{
- let window=null,desktop=null,current=null,revision=0,openSerial=0,timer,needsShow=true;
+ let window=null,current=null,revision=0,openSerial=0,timer,needsShow=true;
  function align(){
   if(!window||window.isDestroyed())return;
   const bounds=main().getBounds(),area=screen.getDisplayMatching(bounds).workArea,pref=settings().detailSide;
@@ -19,8 +19,9 @@ module.exports=({main,settings,read,layer,onClose,saveWidth})=>{
   window=new BrowserWindow({width:settings().detailWidth,height:main().getBounds().height,minWidth:300,minHeight:360,show:false,frame:false,transparent:true,resizable:false,skipTaskbar:true,backgroundColor:'#00000000',title:'失物详情',alwaysOnTop:settings().alwaysOnTop,webPreferences:{preload:path.join(__dirname,'preload-detail.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true,backgroundThrottling:false}});
   window.webContents.setWindowOpenHandler(()=>({action:'deny'}));window.webContents.on('will-navigate',event=>event.preventDefault());
   window.on('close',event=>{event.preventDefault();close();});
-  desktop=require('./desktop-layer.cjs')(window);desktop.peer(main());desktop.update(!settings().alwaysOnTop);layer()?.peer(window);
-  window.on('closed',()=>{desktop=null;window=null;layer()?.peer(null);});
+  // One native helper owns both windows, so Win+D state cannot diverge.
+  layer()?.peer(window);
+  window.on('closed',()=>{window=null;layer()?.peer(null);});
   window.loadFile(path.join(__dirname,'ui/detail.html'));
  }
  async function state(){
@@ -36,19 +37,25 @@ module.exports=({main,settings,read,layer,onClose,saveWidth})=>{
  }
  function ready(version){
   if(version!==revision||!current)return false;
-  if(main().isVisible()&&!main().isMinimized()&&(needsShow||!window.isVisible())){align();desktop?.hidden(false);if(!window.isVisible())window.showInactive();needsShow=false;window.webContents.send('detail:show',revision);}return true;
+  if(main().isVisible()&&!main().isMinimized()&&(needsShow||!window.isVisible())){
+   align();
+   // Match the main desktop layer before showing: do not wait for the helper's
+   // next poll after Win+D, which would briefly put the detail behind the shell.
+   window.setAlwaysOnTop(settings().alwaysOnTop||main().isAlwaysOnTop());
+   if(!window.isVisible())window.showInactive();needsShow=false;window.webContents.send('detail:show',revision);
+  }return true;
  }
  function close(animate=true){
   ++openSerial;current=null;revision++;needsShow=true;clearTimeout(timer);onClose();if(!window)return true;
   const version=revision;window.webContents.send('detail:hide');
-  const hide=()=>{if(version!==revision)return;desktop?.hidden(true);window?.hide();};
+  const hide=()=>{if(version!==revision)return;window?.hide();};
   if(animate)timer=setTimeout(hide,180);else hide();return true;
  }
  async function resize(width){
   if(!Number.isFinite(width))throw Error('详情宽度无效');
   const value=Math.round(Math.max(300,Math.min(1000,width)));await saveWidth(value);align();return window?.getBounds().width??value;
  }
- function update(){if(!window)return;window.setAlwaysOnTop(settings().alwaysOnTop);desktop?.update(!settings().alwaysOnTop);align();window.webContents.send('detail:changed');}
- function destroy(){clearTimeout(timer);desktop?.stop();window?.destroy();}
+ function update(){if(!window)return;window.setAlwaysOnTop(settings().alwaysOnTop);align();window.webContents.send('detail:changed');}
+ function destroy(){clearTimeout(timer);window?.destroy();}
  return {open,close,state,ready,resize,align,update,destroy,window:()=>window};
 };
