@@ -16,6 +16,7 @@ async function prepare(role) {
   await fs.copyFile(path.join(source, role === 'viewer' ? 'preload-viewer.cjs' : 'preload.cjs'), path.join(target, 'preload.cjs'));
   await fs.copyFile(path.join(source, 'ui', role === 'viewer' ? 'viewer.js' : 'app.js'), path.join(target, 'ui/app.js'));
   await fs.copyFile(path.join(source, 'ui/styles.css'), path.join(target, 'ui/styles.css'));
+  await fs.copyFile(path.join(source, 'ui/logo.png'), path.join(target, 'ui/logo.png'));
   let html = await fs.readFile(path.join(source, 'ui/index.html'), 'utf8');
   html = html.replace('<title>校园失物招领</title>', `<title>${config.name}</title>`);
   if (role === 'editor') {

@@ -45,3 +45,5 @@ dialog input,dialog select,dialog button{background:var(--input-bg);color:var(--
 .widget{container-type:inline-size}.widget-header h1{-webkit-app-region:no-drag;flex-shrink:0;user-select:none;line-height:24px}.geometry-changing .widget{flex:0 0 var(--widget-fixed);min-width:0}.geometry-changing{overflow:hidden}.record-list{scrollbar-gutter:stable}@container(max-width:360px){.widget-header h1 .muted{display:none}}
 
 #reader-open{-webkit-app-region:no-drag;app-region:no-drag;display:inline-block;padding:0;border:0;border-radius:0;background:transparent;color:inherit;font:inherit;letter-spacing:inherit;line-height:inherit;vertical-align:baseline;cursor:pointer}#reader-open:hover{background:transparent;color:var(--selected)}
+
+#reader-open{display:inline-flex;align-items:center;gap:7px}.viewer-logo{width:28px;height:28px;flex-shrink:0;object-fit:contain;background:#fff;border-radius:6px;pointer-events:none}.widget-header h1{display:flex;align-items:center;gap:5px}

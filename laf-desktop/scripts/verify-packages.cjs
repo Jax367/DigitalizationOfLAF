@@ -8,7 +8,7 @@ for (const role of ['viewer']) {
   const project = path.join(root, `laf-${role}`);
   const archive = path.join(project, 'dist/win-unpacked/resources/app.asar');
   const entries = asar.listPackage(archive).map(entry => entry.replaceAll('\\', '/'));
-  for (const relative of ['src/network.cjs', 'src/main.cjs', 'src/device-client.cjs', 'src/client-config.cjs', 'src/preload.cjs', 'src/storage.cjs', 'src/ui/app.js', 'src/ui/index.html', 'src/ui/styles.css', 'src/desktop-layer.cjs','src/preload-reader.cjs','src/ui/reader.html','src/ui/reader.js','src/ui/reader.css','src/side-detail.cjs','src/preload-detail.cjs','src/ui/detail.html','src/ui/detail.js','src/ui/detail.css']) assert.ok(asar.extractFile(archive, path.normalize(relative)).equals(fs.readFileSync(path.join(project, relative))), `${role} 打包源码不一致：${relative}`);
+  for (const relative of ['src/ui/logo.png', 'src/network.cjs', 'src/main.cjs', 'src/device-client.cjs', 'src/client-config.cjs', 'src/preload.cjs', 'src/storage.cjs', 'src/ui/app.js', 'src/ui/index.html', 'src/ui/styles.css', 'src/desktop-layer.cjs','src/preload-reader.cjs','src/ui/reader.html','src/ui/reader.js','src/ui/reader.css','src/side-detail.cjs','src/preload-detail.cjs','src/ui/detail.html','src/ui/detail.js','src/ui/detail.css']) assert.ok(asar.extractFile(archive, path.normalize(relative)).equals(fs.readFileSync(path.join(project, relative))), `${role} 打包源码不一致：${relative}`);
   assert.ok(fs.readFileSync(path.join(project,'dist/win-unpacked/resources/app.asar.unpacked/src/desktop-layer.ps1')).equals(fs.readFileSync(path.join(project,'src/desktop-layer.ps1'))));
   const pkg = JSON.parse(asar.extractFile(archive, 'package.json'));
   assert.equal(pkg.name, `laf-${role}`);
